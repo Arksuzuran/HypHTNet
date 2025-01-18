@@ -12,7 +12,7 @@ from torch.utils.data import TensorDataset, DataLoader
 import argparse
 from distutils.util import strtobool
 import torch
-from Model import HTNet
+from model import HTNet
 import numpy as np
 from facenet_pytorch import MTCNN
 from utils import LossFunction, Logger

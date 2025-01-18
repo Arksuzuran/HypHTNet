@@ -16,7 +16,7 @@ from distutils.util import strtobool
 import torch
 from vit_pytorch import SimpleViT
 from vit_pytorch.crossformer import CrossFormer
-from Model import HTNet
+from model import HTNet
 # from facenest import Fusionmodel
 import numpy as np
 import cv2 as cv
