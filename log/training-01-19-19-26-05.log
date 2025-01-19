@@ -1,0 +1,9 @@
+2025-01-19 19:26:05,121 - INFO - lr=0.000050, epochs=800, device=cuda
+
+2025-01-19 19:26:13,466 - INFO - ['006', '007', '009', '010', '011', '012', '013', '014', '015', '016', '017', '018', '019', '020', '021', '022', '023', '024', '026', '028', '030', '031', '032', '033', '034', '035', '036', '037', 's01', 's02', 's03', 's04', 's05', 's06', 's08', 's09', 's11', 's12', 's13', 's14', 's15', 's18', 's19', 's20', 'sub01', 'sub02', 'sub03', 'sub04', 'sub05', 'sub06', 'sub07', 'sub08', 'sub09', 'sub11', 'sub12', 'sub13', 'sub14', 'sub15', 'sub16', 'sub17', 'sub19', 'sub20', 'sub21', 'sub22', 'sub23', 'sub24', 'sub25', 'sub26']
+2025-01-19 19:26:13,466 - INFO - ==============Subject: 006==============
+2025-01-19 19:26:14,223 - INFO - train
+2025-01-19 19:26:20,445 - INFO - Epoch [10], 	Train Acc: 0.57540603, 	Train Loss:  4.13916408,	Classification Loss: 3.00761501, 	Contrastive Loss: 1.13154905
+2025-01-19 19:26:20,461 - INFO - Epoch [10], 	Val Acc: 0.18181818, 	Val Loss:  0.02506728,		Classification Loss: 0.00154165, 	Contrastive Loss: 0.02352563
+2025-01-19 19:26:25,682 - INFO - Epoch [20], 	Train Acc: 0.44547564, 	Train Loss:  3.62607036,	Classification Loss: 2.59010106, 	Contrastive Loss: 1.03596917
+2025-01-19 19:26:25,698 - INFO - Epoch [20], 	Val Acc: 0.81818182, 	Val Loss:  0.02031055,		Classification Loss: 0.00085005, 	Contrastive Loss: 0.01946049

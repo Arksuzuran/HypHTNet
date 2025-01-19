@@ -15,7 +15,7 @@ import torch
 from model import HTNet
 import numpy as np
 from facenet_pytorch import MTCNN
-from utils import LossFunction, Logger
+from utils import LossFunction, Logger, filter_filename_by_datatype
 
 
 # Some of the codes are adapted from STSNet
@@ -56,9 +56,22 @@ def recognition_evaluation(final_gt, final_pred, show=False):
         return '', ''
 
 
-# 1. get the whole face block coordinates
-def whole_face_block_coordinates():
-    df = pandas.read_csv('combined_3_class2_for_optical_flow.csv')
+def whole_face_block_coordinates(dataset_type):
+    """
+    get the whole face block coordinates
+    :param dataset_type: 指定的数据集
+    """
+    # 提取指定数据集的数据
+    raw_df = pandas.read_csv('combined_3_class2_for_optical_flow.csv')
+    df = raw_df
+    if dataset_type == '0':
+        df = raw_df[raw_df['dataset'] == 'samm'].copy().reset_index(drop=True)
+    elif dataset_type == '1':
+        df = raw_df[raw_df['dataset'] == 'smic'].copy().reset_index(drop=True)
+    elif dataset_type == '2':
+        df = raw_df[raw_df['dataset'] == 'casme2'].copy().reset_index(drop=True)
+    # print("whole_face_block_coordinates提取数据", df)
+
     m, n = df.shape
     base_data_src = './datasets/combined_datasets_whole'
     total_emotion = 0
@@ -103,13 +116,16 @@ def whole_face_block_coordinates():
     return face_block_coordinates
 
 
-# 2. crop the 28*28-> 14*14 according to i5 image centers
-def crop_optical_flow_block():
-    face_block_coordinates_dict = whole_face_block_coordinates()
+def crop_optical_flow_block(dataset_type):
+    """
+    crop the 28*28-> 14*14 according to i5 image centers
+    :param dataset_type: 指定的数据集
+    """
+    face_block_coordinates_dict = whole_face_block_coordinates(dataset_type)
     # print(len(face_block_coordinates_dict))
     # Get train dataset
     whole_optical_flow_path = './datasets/STSNet_whole_norm_u_v_os'
-    whole_optical_flow_imgs = os.listdir(whole_optical_flow_path)
+    whole_optical_flow_imgs = filter_filename_by_datatype(whole_optical_flow_path, dataset_type)
     four_parts_optical_flow_imgs = {}
     # print(whole_optical_flow_imgs[0]) #spNO.189_f_150.png
     for n_img in whole_optical_flow_imgs:
@@ -174,42 +190,53 @@ def main(config):
     batch_size = 256
     epochs = 800
     all_accuracy_dict = {}
+
     is_cuda = torch.cuda.is_available()
     if is_cuda:
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
-    loss_fn = LossFunction()
-    logger_time = datetime.now().strftime('%m-%d-%H-%M-%S')
-    logger = Logger('./log/', f'training-{logger_time}.log')
 
+    exp_time = datetime.now().strftime('%m-%d-%H-%M-%S')
+    logger = Logger('./log/', f'training-{exp_time}.log')
+    weight_dir = './ourmodel_threedatasets_weights/' + exp_time
     if (config.train):
-        if not path.exists('ourmodel_threedatasets_weights'):
-            os.mkdir('ourmodel_threedatasets_weights')
+        os.makedirs(weight_dir, exist_ok=True)
+        # if not path.exists('ourmodel_threedatasets_weights'):
+        #     os.mkdir('ourmodel_threedatasets_weights')
 
     logger('lr=%f, epochs=%d, device=%s\n' % (learning_rate, epochs, device))
 
+    loss_fn = LossFunction()
     total_gt = []
     total_pred = []
     best_total_pred = []
 
     t = time.time()
 
-    main_path = './datasets/three_norm_u_v_os'
-    subName = os.listdir(main_path)
-    all_five_parts_optical_flow = crop_optical_flow_block()
-    logger(subName)
+    # get data by dataset type
+    dataset_type = config.d
+    main_dataset_dir = './datasets/three_norm_u_v_os'
+    # 训练时加载全部数据进行训练
+    if (config.train):
+        sub_name = filter_filename_by_datatype(main_dataset_dir, "all")
+        all_five_parts_optical_flow = crop_optical_flow_block("all")
+    # 测试时选择部分数据集
+    else:
+        sub_name = filter_filename_by_datatype(main_dataset_dir, dataset_type)
+        all_five_parts_optical_flow = crop_optical_flow_block(dataset_type)
+    logger(sub_name)
 
-    for n_subName in subName:
+    for n_subName in sub_name:
         logger(f'==============Subject: {n_subName}==============')
         y_train = []
         y_test = []
         four_parts_train = []
         four_parts_test = []
         # Get train dataset
-        expression = os.listdir(main_path + '/' + n_subName + '/u_train')
+        expression = os.listdir(main_dataset_dir + '/' + n_subName + '/u_train')
         for n_expression in expression:
-            img = os.listdir(main_path + '/' + n_subName + '/u_train/' + n_expression)
+            img = os.listdir(main_dataset_dir + '/' + n_subName + '/u_train/' + n_expression)
 
             for n_img in img:
                 y_train.append(int(n_expression))
@@ -219,9 +246,9 @@ def main(config):
                 four_parts_train.append(lr_eye_lips)
 
         # Get test dataset
-        expression = os.listdir(main_path + '/' + n_subName + '/u_test')
+        expression = os.listdir(main_dataset_dir + '/' + n_subName + '/u_test')
         for n_expression in expression:
-            img = os.listdir(main_path + '/' + n_subName + '/u_test/' + n_expression)
+            img = os.listdir(main_dataset_dir + '/' + n_subName + '/u_test/' + n_expression)
 
             for n_img in img:
                 y_test.append(int(n_expression))
@@ -229,7 +256,7 @@ def main(config):
                 r_eye_lips = cv2.hconcat([all_five_parts_optical_flow[n_img][3], all_five_parts_optical_flow[n_img][4]])
                 lr_eye_lips = cv2.vconcat([l_eye_lips, r_eye_lips])
                 four_parts_test.append(lr_eye_lips)
-        weight_path = 'ourmodel_threedatasets_weights' + '/' + n_subName + '.pth'
+        weight_path = weight_dir + '/' + n_subName + '.pth'
 
         # Reset or load model weigts
         model = HTNet(
@@ -244,6 +271,9 @@ def main(config):
         )
 
         model = model.to(device)
+        if torch.cuda.device_count() > 1:
+            print("Using multi GPUs...")
+            model = nn.DataParallel(model)
 
         if (config.train):
             # model.apply(reset_weights)
@@ -365,5 +395,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # input parameters
     parser.add_argument('--train', type=strtobool, default=False)  # Train or use pre-trained weight for prediction
+    parser.add_argument('--d', type=str, default='all', help='Dataset to eval the model. Only work when --train '
+                                                             'False. 0 for SAMM, 1 for SMIC , 2 for CASMEII,'
+                                                             'default for combined dataset')
     config = parser.parse_args()
     main(config)

@@ -13,6 +13,7 @@ from PIL import Image
 import logging
 from numpy.fft import fft, ifft
 import os
+import re
 
 
 def set_seed(seed):
@@ -141,7 +142,32 @@ def cosine_sim_1(e0, e1, loss_type="cos1", margin_t=0.5, margin_f=0.0):
     return loss
 
 
+def filter_filename_by_datatype(base_dir, mode='all'):
+    """
+    筛选出所需指定数据集的文件名
+    :param base_dir: 要搜索的目录
+    :param mode: 0 for SAMM, 1 for SMIC , 2 for CASMEII, all for combined dataset
+    """
+    pattern = None
+    if mode == '0':
+        pattern = re.compile(r"^\d+")
+    elif mode == '1':
+        pattern = re.compile(r"^s")
+    elif mode == '2':
+        pattern = re.compile(r"^sub")
+
+    if pattern is None:
+        return os.listdir(base_dir)
+    files = []
+    for entry in os.listdir(base_dir):
+        if pattern.match(entry):
+            files.append(entry)
+    return files
+
 class Logger:
+    """
+    日志记录
+    """
     def __init__(self, dir, filename):
         if not os.path.exists(dir):
             os.mkdir(dir)
