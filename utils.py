@@ -152,7 +152,7 @@ def filter_filename_by_datatype(base_dir, mode='all'):
     if mode == '0':
         pattern = re.compile(r"^\d+")
     elif mode == '1':
-        pattern = re.compile(r"^s")
+        pattern = re.compile(r"^s(?!ub)")
     elif mode == '2':
         pattern = re.compile(r"^sub")
 

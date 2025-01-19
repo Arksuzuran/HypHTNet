@@ -36,3 +36,10 @@ The results are listed as follows:We investigate the effects of the transformer 
 
 ``` python main_HTNet.py --train True```
 
+### Experiment
+
+| UF1/UAR  | Full          | SMIC          | CASME II      | SAMM          |
+| -------- | ------------- | ------------- | ------------- | ------------- |
+| HTNet    | 0.8603/0.8475 | 0.8049/0.7905 | 0.9532/0.9516 | 0.8131/0.8124 |
+| HypHTNet | 0.8745/0.8574 | 0.8729/0.8553 | 0.8729/0.8553 | 0.8729/0.8553 |
+

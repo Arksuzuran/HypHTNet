@@ -218,7 +218,10 @@ def main(config):
     t = time.time()
 
     # get data by dataset type
-    sub_name = filter_filename_by_datatype(main_dataset_dir, "all")
+    if (config.train):
+        sub_name = filter_filename_by_datatype(main_dataset_dir, "all")
+    else:
+        sub_name = filter_filename_by_datatype(main_dataset_dir, dataset_type)
     all_five_parts_optical_flow = crop_optical_flow_block("all")
     logger(sub_name)
 
