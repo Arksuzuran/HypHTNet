@@ -164,10 +164,12 @@ def filter_filename_by_datatype(base_dir, mode='all'):
             files.append(entry)
     return files
 
+
 class Logger:
     """
     日志记录
     """
+
     def __init__(self, dir, filename):
         if not os.path.exists(dir):
             os.mkdir(dir)

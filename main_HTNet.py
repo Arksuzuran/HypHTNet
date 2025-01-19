@@ -17,6 +17,9 @@ import numpy as np
 from facenet_pytorch import MTCNN
 from utils import LossFunction, Logger, filter_filename_by_datatype
 
+# 数据集及其对应的编号
+datatype_dic = {'0': 'samm', '1': 'smic', '2': 'casme2', 'all': 'all'}
+
 
 # Some of the codes are adapted from STSNet
 def reset_weights(m):  # Reset the weights for network to avoid weight leakage
@@ -63,13 +66,10 @@ def whole_face_block_coordinates(dataset_type):
     """
     # 提取指定数据集的数据
     raw_df = pandas.read_csv('combined_3_class2_for_optical_flow.csv')
-    df = raw_df
-    if dataset_type == '0':
-        df = raw_df[raw_df['dataset'] == 'samm'].copy().reset_index(drop=True)
-    elif dataset_type == '1':
-        df = raw_df[raw_df['dataset'] == 'smic'].copy().reset_index(drop=True)
-    elif dataset_type == '2':
-        df = raw_df[raw_df['dataset'] == 'casme2'].copy().reset_index(drop=True)
+    if dataset_type == 'all':
+        df = raw_df
+    else:
+        df = raw_df[raw_df['dataset'] == datatype_dic[dataset_type]].copy().reset_index(drop=True)
     # print("whole_face_block_coordinates提取数据", df)
 
     m, n = df.shape
@@ -197,13 +197,16 @@ def main(config):
     else:
         device = torch.device('cpu')
 
+    dataset_type = config.d  # 本次eval所选的数据集
     exp_time = datetime.now().strftime('%m-%d-%H-%M-%S')
-    logger = Logger('./log/', f'training-{exp_time}.log')
+    main_dataset_dir = './datasets/three_norm_u_v_os'
     weight_dir = './ourmodel_threedatasets_weights/' + exp_time
     if (config.train):
-        os.makedirs(weight_dir, exist_ok=True)
-        # if not path.exists('ourmodel_threedatasets_weights'):
-        #     os.mkdir('ourmodel_threedatasets_weights')
+        logger = Logger('./log/', f'training--{exp_time}.log')
+        os.makedirs(weight_dir, exist_ok=True)  # 训练时创建权重目录
+    else:
+        logger = Logger('./log/', f'eval--{datatype_dic[dataset_type]}--w{config.wdir}--{exp_time}.log')
+        weight_dir = './ourmodel_threedatasets_weights/' + config.wdir  # 测试时需要选择加载指定的权重目录
 
     logger('lr=%f, epochs=%d, device=%s\n' % (learning_rate, epochs, device))
 
@@ -215,16 +218,8 @@ def main(config):
     t = time.time()
 
     # get data by dataset type
-    dataset_type = config.d
-    main_dataset_dir = './datasets/three_norm_u_v_os'
-    # 训练时加载全部数据进行训练
-    if (config.train):
-        sub_name = filter_filename_by_datatype(main_dataset_dir, "all")
-        all_five_parts_optical_flow = crop_optical_flow_block("all")
-    # 测试时选择部分数据集
-    else:
-        sub_name = filter_filename_by_datatype(main_dataset_dir, dataset_type)
-        all_five_parts_optical_flow = crop_optical_flow_block(dataset_type)
+    sub_name = filter_filename_by_datatype(main_dataset_dir, "all")
+    all_five_parts_optical_flow = crop_optical_flow_block("all")
     logger(sub_name)
 
     for n_subName in sub_name:
@@ -233,6 +228,7 @@ def main(config):
         y_test = []
         four_parts_train = []
         four_parts_test = []
+
         # Get train dataset
         expression = os.listdir(main_dataset_dir + '/' + n_subName + '/u_train')
         for n_expression in expression:
@@ -271,16 +267,18 @@ def main(config):
         )
 
         model = model.to(device)
-        if torch.cuda.device_count() > 1:
-            print("Using multi GPUs...")
-            model = nn.DataParallel(model)
+        # if torch.cuda.device_count() > 1:
+        #     logger(f"Using {torch.cuda.device_count()} GPUs...")
+        #     model = nn.DataParallel(model)
 
+        # 训练 or 加载模型参数
         if (config.train):
             # model.apply(reset_weights)
-
-            logger('train')
+            logger('Train')
         else:
             model.load_state_dict(torch.load(weight_path))
+            logger('Eval\nLoad model weights: ' + weight_path)
+
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
         y_train = torch.Tensor(y_train).to(dtype=torch.long)
@@ -398,5 +396,7 @@ if __name__ == '__main__':
     parser.add_argument('--d', type=str, default='all', help='Dataset to eval the model. Only work when --train '
                                                              'False. 0 for SAMM, 1 for SMIC , 2 for CASMEII,'
                                                              'default for combined dataset')
+    parser.add_argument('--wdir', type=str, default='01-19-00-50-12', help='Model weight dir to load. Only work when --train '
+                                                             'False.')
     config = parser.parse_args()
     main(config)
