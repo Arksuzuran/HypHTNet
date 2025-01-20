@@ -188,7 +188,7 @@ class Logger:
 # TODO 损失函数设计
 class LossFunction:
 
-    def __init__(self, classification_loss_type="cross_entropy", constractive_loss_type=0, alpha=0.002):
+    def __init__(self, classification_loss_type="cross_entropy", contrastive_loss_type=0, alpha=0.002):
         """
         alpha: 对比损失的权重
         """
@@ -200,7 +200,7 @@ class LossFunction:
             self.classification_loss_fn = nn.CrossEntropyLoss()
 
         self.contrastive_loss_fn = None
-        if constractive_loss_type == 0:
+        if contrastive_loss_type == 0:
             self.contrastive_loss_fn = contrastive_loss_multi_class_0
 
     def __call__(self, x_p, y_hat, y):

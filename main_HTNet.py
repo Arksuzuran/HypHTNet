@@ -189,6 +189,7 @@ def main(config):
     learning_rate = 0.00005
     batch_size = 256
     epochs = 800
+    alpha = config.a
     all_accuracy_dict = {}
 
     is_cuda = torch.cuda.is_available()
@@ -202,15 +203,16 @@ def main(config):
     main_dataset_dir = './datasets/three_norm_u_v_os'
     weight_dir = './ourmodel_threedatasets_weights/' + exp_time
     if (config.train):
-        logger = Logger('./log/', f'training--{exp_time}.log')
+        logger = Logger('./log/', f'training--{exp_time}--a{alpha}.log')
         os.makedirs(weight_dir, exist_ok=True)  # 训练时创建权重目录
     else:
         logger = Logger('./log/', f'eval--{datatype_dic[dataset_type]}--w{config.wdir}--{exp_time}.log')
         weight_dir = './ourmodel_threedatasets_weights/' + config.wdir  # 测试时需要选择加载指定的权重目录
+        epochs = 1  # 测试时无需多个epochs
 
-    logger('lr=%f, epochs=%d, device=%s\n' % (learning_rate, epochs, device))
+    logger('lr=%f, epochs=%d, alpha=%f, device=%s\n' % (learning_rate, alpha, epochs, device))
 
-    loss_fn = LossFunction()
+    loss_fn = LossFunction(alpha=alpha)
     total_gt = []
     total_pred = []
     best_total_pred = []
@@ -383,7 +385,10 @@ def main(config):
         best_UF1, best_UAR = recognition_evaluation(total_gt, best_total_pred, show=True)
         logger(f'best UF1: {round(best_UF1, 4)} \t best UAR: {round(best_UAR, 4)}')
 
-    logger('Final Evaluation: ')
+    if(config.train):
+        logger('Final Evaluation on training: ')
+    else:
+        logger(f'Final Evaluation on {datatype_dic[dataset_type]}: ')
     UF1, UAR = recognition_evaluation(total_gt, total_pred)
     logger(np.shape(total_gt))
     logger(f'Total Time Taken: {time.time() - t}')
@@ -396,6 +401,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # input parameters
     parser.add_argument('--train', type=strtobool, default=False)  # Train or use pre-trained weight for prediction
+    parser.add_argument('--a', type=float, default='0.002',
+                        help='Weight of contrastive loss')
     parser.add_argument('--d', type=str, default='all', help='Dataset to eval the model. Only work when --train '
                                                              'False. 0 for SAMM, 1 for SMIC , 2 for CASMEII,'
                                                              'default for combined dataset')

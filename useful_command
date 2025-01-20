@@ -2,4 +2,6 @@ python main_HTNet.py --train False --d 0
 python main_HTNet.py --train False --d 1
 python main_HTNet.py --train False --d 2
 
-python main_HTNet.py --train True
+python main_HTNet.py --train True -a 0.01
+python main_HTNet.py --train True -a 0.005
+python main_HTNet.py --train True -a 0.001
