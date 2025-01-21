@@ -1,7 +1,14 @@
-python main_HTNet.py --train False --d 0
-python main_HTNet.py --train False --d 1
-python main_HTNet.py --train False --d 2
+CUDA_VISIBLE_DEVICES=0 python main_HTNet.py --train False --d 0 --wdir 01-21-01-23-00
+CUDA_VISIBLE_DEVICES=1 python main_HTNet.py --train False --d 1 --wdir 01-21-01-23-00
+CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train False --d 2 --wdir 01-21-01-23-00
 
-python main_HTNet.py --train True -a 0.01
-python main_HTNet.py --train True -a 0.005
-python main_HTNet.py --train True -a 0.001
+CUDA_VISIBLE_DEVICES=0 python main_HTNet.py --train True --a 0.01
+CUDA_VISIBLE_DEVICES=1 python main_HTNet.py --train True --a 0.005
+CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train True --a 0.001
+
+CUDA_VISIBLE_DEVICES=0 python main_HTNet.py --train True --a 0.0015
+CUDA_VISIBLE_DEVICES=1 python main_HTNet.py --train True --a 0.0025
+
+CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train True --a 0.001 --m p
+CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train True --a 0.001 --m d
+

@@ -188,8 +188,10 @@ class Fusionmodel(nn.Module):
 def main(config):
     learning_rate = 0.00005
     batch_size = 256
+    patch_size = config.psz
     epochs = 800
     alpha = config.a
+    metric = config.m
     all_accuracy_dict = {}
 
     is_cuda = torch.cuda.is_available()
@@ -203,16 +205,17 @@ def main(config):
     main_dataset_dir = './datasets/three_norm_u_v_os'
     weight_dir = './ourmodel_threedatasets_weights/' + exp_time
     if (config.train):
-        logger = Logger('./log/', f'training--{exp_time}--a{alpha}.log')
+        logger = Logger('./log/', f'training--{exp_time}--a{alpha}--m{metric}.log')
         os.makedirs(weight_dir, exist_ok=True)  # 训练时创建权重目录
     else:
         logger = Logger('./log/', f'eval--{datatype_dic[dataset_type]}--w{config.wdir}--{exp_time}.log')
         weight_dir = './ourmodel_threedatasets_weights/' + config.wdir  # 测试时需要选择加载指定的权重目录
         epochs = 1  # 测试时无需多个epochs
 
-    logger('lr=%f, epochs=%d, alpha=%f, device=%s\n' % (learning_rate, alpha, epochs, device))
+    logger('lr=%f, epochs=%d, device=%s\n' % (learning_rate, epochs, device))
+    logger(vars(config))
 
-    loss_fn = LossFunction(alpha=alpha)
+    loss_fn = LossFunction(alpha=alpha, metric=metric)
     total_gt = []
     total_pred = []
     best_total_pred = []
@@ -262,7 +265,7 @@ def main(config):
         # Reset or load model weigts
         model = HTNet(
             image_size=28,
-            patch_size=7,
+            patch_size=patch_size,
             dim=256,  # 256,--96, 56-, 192
             heads=3,  # 3 ---- , 6-
             num_hierarchies=3,  # 3----number of hierarchies
@@ -401,12 +404,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # input parameters
     parser.add_argument('--train', type=strtobool, default=False)  # Train or use pre-trained weight for prediction
-    parser.add_argument('--a', type=float, default='0.002',
+    parser.add_argument('--a', type=float, default='0.001',
                         help='Weight of contrastive loss')
+    parser.add_argument('--m', type=str, default='p', help='Metric used for loss function. e for Euclidean distance, '
+                                                           'p for normal Hyperbolic distance, '
+                                                           'd for Hyperbolic dot produce distance.'
+                                                           '(default: p)')
     parser.add_argument('--d', type=str, default='all', help='Dataset to eval the model. Only work when --train '
                                                              'False. 0 for SAMM, 1 for SMIC , 2 for CASMEII,'
                                                              'default for combined dataset')
-    parser.add_argument('--wdir', type=str, default='01-19-00-50-12', help='Model weight dir to load. Only work when --train '
-                                                             'False.')
+    parser.add_argument('--wdir', type=str, default='01-19-00-50-12', help='Model weight dir to load(01-19-00-50-12). '
+                                                                           'Only work when --train False.')
+    parser.add_argument('--psz', type=int, default='7',
+                        help='Patch Size (default: 7)')
     config = parser.parse_args()
     main(config)
