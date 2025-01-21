@@ -188,7 +188,7 @@ class Logger:
 # TODO 损失函数设计
 class LossFunction:
 
-    def __init__(self, classification_loss_type="cross_entropy", contrastive_loss_type=0, alpha=0.001, metric="d"):
+    def __init__(self, classification_loss_type="cross_entropy", contrastive_loss_type=0, alpha=0.05, metric="d"):
         """
         alpha: 对比损失的权重
         """
@@ -238,7 +238,7 @@ def contrastive_loss_multi_class_0(embeddings, labels, metric="d", tau=0.2, hyp_
 
     bsize = embeddings.shape[0]
     # 特征向量在双曲空间的距离矩阵 即两两样本之间的距离
-    dist_matrix = dist_f(embeddings, embeddings) / tau
+    dist = dist_f(embeddings, embeddings) / tau
     # print("embeddings:", embeddings.shape, "labels:", labels.shape)
 
     # 计算正负样本对 正样本对为1， 负样本对为0
@@ -246,7 +246,7 @@ def contrastive_loss_multi_class_0(embeddings, labels, metric="d", tau=0.2, hyp_
     # print("mask:", mask.shape)
 
     # 排除对角线元素，即自身与自身的距离
-    logits = dist_matrix - torch.diag(dist_matrix.diag())
+    logits = dist - torch.diag(dist.diag())
 
     # 正样本对间距
     logits_pos = logits * mask

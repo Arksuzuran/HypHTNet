@@ -9,6 +9,11 @@ CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train True --a 0.001
 CUDA_VISIBLE_DEVICES=0 python main_HTNet.py --train True --a 0.0015
 CUDA_VISIBLE_DEVICES=1 python main_HTNet.py --train True --a 0.0025
 
-CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train True --a 0.001 --m p
-CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train True --a 0.001 --m d
+CUDA_VISIBLE_DEVICES=0 python main_HTNet.py --train True --a 0.1 --m p
+CUDA_VISIBLE_DEVICES=1 python main_HTNet.py --train True --a 0.05 --m p
+CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train True --a 0.02 --m p
+CUDA_VISIBLE_DEVICES=3 python main_HTNet.py --train True --a 0.1 --m d
+CUDA_VISIBLE_DEVICES=4 python main_HTNet.py --train True --a 0.05 --m d
+CUDA_VISIBLE_DEVICES=5 python main_HTNet.py --train True --a 0.02 --m d
+
 

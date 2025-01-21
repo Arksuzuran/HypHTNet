@@ -189,7 +189,7 @@ def main(config):
     learning_rate = 0.00005
     batch_size = 256
     patch_size = config.psz
-    epochs = 800
+    epochs = 600
     alpha = config.a
     metric = config.m
     all_accuracy_dict = {}
@@ -205,7 +205,7 @@ def main(config):
     main_dataset_dir = './datasets/three_norm_u_v_os'
     weight_dir = './ourmodel_threedatasets_weights/' + exp_time
     if (config.train):
-        logger = Logger('./log/', f'training--{exp_time}--a{alpha}--m{metric}.log')
+        logger = Logger('./log/', f'training--{exp_time}--a{alpha}--m-{metric}.log')
         os.makedirs(weight_dir, exist_ok=True)  # 训练时创建权重目录
     else:
         logger = Logger('./log/', f'eval--{datatype_dic[dataset_type]}--w{config.wdir}--{exp_time}.log')
@@ -385,6 +385,7 @@ def main(config):
         total_gt.extend(y.tolist())
         best_total_pred.extend(best_each_subject_pred)
         UF1, UAR = recognition_evaluation(total_gt, total_pred, show=True)
+        logger(f'UF1: {round(UF1, 4)} \t UAR: {round(UAR, 4)}')
         best_UF1, best_UAR = recognition_evaluation(total_gt, best_total_pred, show=True)
         logger(f'best UF1: {round(best_UF1, 4)} \t best UAR: {round(best_UAR, 4)}')
 
@@ -404,7 +405,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # input parameters
     parser.add_argument('--train', type=strtobool, default=False)  # Train or use pre-trained weight for prediction
-    parser.add_argument('--a', type=float, default='0.001',
+    parser.add_argument('--a', type=float, default='0.05',
                         help='Weight of contrastive loss')
     parser.add_argument('--m', type=str, default='p', help='Metric used for loss function. e for Euclidean distance, '
                                                            'p for normal Hyperbolic distance, '
