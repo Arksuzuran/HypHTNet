@@ -81,11 +81,13 @@ def whole_face_block_coordinates(dataset_type):
 
     # for i in range(0, m):
     for i in range(0, m):
-        image_name = str(df['sub'][i]) + '_' + str(
-            df['filename_o'][i]) + ' .png'
+        # image_name = str(df['sub'][i]) + '_' + str(
+        #     df['filename_o'][i])
+        image_name = df['imagename'][i].replace('.jpg', '')
         # print(image_name)
         img_path_apex = base_data_src + '/' + df['imagename'][i]
         train_face_image_apex = cv2.imread(img_path_apex)  # (444, 533, 3)
+        # print(img_path_apex)
         face_apex = cv2.resize(train_face_image_apex, (28, 28), interpolation=cv2.INTER_AREA)
         # get face and bounding box
         mtcnn = MTCNN(margin=0, image_size=image_size_u_v, select_largest=True, post_process=False, device='cuda:0')
@@ -124,34 +126,49 @@ def crop_optical_flow_block(dataset_type):
     face_block_coordinates_dict = whole_face_block_coordinates(dataset_type)
     # print(len(face_block_coordinates_dict))
     # Get train dataset
+    raw_img_path = './datasets/combined_datasets_whole'
     whole_optical_flow_path = './datasets/STSNet_whole_norm_u_v_os'
-    whole_optical_flow_imgs = filter_filename_by_datatype(whole_optical_flow_path, dataset_type)
-    four_parts_optical_flow_imgs = {}
+    whole_optical_flow_img_names = filter_filename_by_datatype(whole_optical_flow_path, dataset_type)
+
+    # 数据集图片字典的键去掉.png
+    img_name_list = []
+    for filename in whole_optical_flow_img_names:
+        img_name_list.append(filename.replace(' .png', ''))
+
+    four_parts_imgs = {}
     # print(whole_optical_flow_imgs[0]) #spNO.189_f_150.png
-    for n_img in whole_optical_flow_imgs:
-        four_parts_optical_flow_imgs[n_img] = []
-        flow_image = cv2.imread(whole_optical_flow_path + '/' + n_img)
+    for n_img in img_name_list:
+        four_parts_imgs[n_img] = []
+        flow_image = cv2.imread(whole_optical_flow_path + '/' + n_img + ' .png')
+        raw_image = cv2.imread(raw_img_path + '/' + n_img + '.jpg')
+        raw_image = cv2.resize(raw_image, (28, 28), interpolation=cv2.INTER_AREA)
+
+        # 将光流图和原始图片在通道维度上拼接
+        combined_image = cv2.merge([flow_image, raw_image])
+
         four_part_coordinates = face_block_coordinates_dict[n_img]
+
         # 每个部位都是14 * 14
-        l_eye = flow_image[four_part_coordinates[0][0] - 7:four_part_coordinates[0][0] + 7,
+        l_eye = combined_image[four_part_coordinates[0][0] - 7:four_part_coordinates[0][0] + 7,
                 four_part_coordinates[0][1] - 7: four_part_coordinates[0][1] + 7]
-        l_lips = flow_image[four_part_coordinates[1][0] - 7:four_part_coordinates[1][0] + 7,
+        l_lips = combined_image[four_part_coordinates[1][0] - 7:four_part_coordinates[1][0] + 7,
                  four_part_coordinates[1][1] - 7: four_part_coordinates[1][1] + 7]
-        nose = flow_image[four_part_coordinates[2][0] - 7:four_part_coordinates[2][0] + 7,
+        nose = combined_image[four_part_coordinates[2][0] - 7:four_part_coordinates[2][0] + 7,
                four_part_coordinates[2][1] - 7: four_part_coordinates[2][1] + 7]
-        r_eye = flow_image[four_part_coordinates[3][0] - 7:four_part_coordinates[3][0] + 7,
+        r_eye = combined_image[four_part_coordinates[3][0] - 7:four_part_coordinates[3][0] + 7,
                 four_part_coordinates[3][1] - 7: four_part_coordinates[3][1] + 7]
-        r_lips = flow_image[four_part_coordinates[4][0] - 7:four_part_coordinates[4][0] + 7,
+        r_lips = combined_image[four_part_coordinates[4][0] - 7:four_part_coordinates[4][0] + 7,
                  four_part_coordinates[4][1] - 7: four_part_coordinates[4][1] + 7]
-        four_parts_optical_flow_imgs[n_img].append(l_eye)
-        four_parts_optical_flow_imgs[n_img].append(l_lips)
-        four_parts_optical_flow_imgs[n_img].append(nose)
-        four_parts_optical_flow_imgs[n_img].append(r_eye)
-        four_parts_optical_flow_imgs[n_img].append(r_lips)
-        # print(np.shape(l_eye))
+
+        four_parts_imgs[n_img].append(l_eye)
+        four_parts_imgs[n_img].append(l_lips)
+        four_parts_imgs[n_img].append(nose)
+        four_parts_imgs[n_img].append(r_eye)
+        four_parts_imgs[n_img].append(r_lips)
+        # print(np.shape(four_parts_imgs[n_img]))
     # print((four_parts_optical_flow_imgs['spNO.189_f_150.png'][0]))->(14,14,3)
-    print(len(four_parts_optical_flow_imgs))
-    return four_parts_optical_flow_imgs
+    # print(np.shape(four_parts_imgs))
+    return four_parts_imgs
 
 
 class Fusionmodel(nn.Module):
@@ -243,6 +260,7 @@ def main(config):
             img = os.listdir(main_dataset_dir + '/' + n_subName + '/u_train/' + n_expression)
 
             for n_img in img:
+                n_img = n_img.replace(' .png', '')
                 y_train.append(int(n_expression))
                 l_eye_lips = cv2.hconcat([all_five_parts_optical_flow[n_img][0], all_five_parts_optical_flow[n_img][1]])
                 r_eye_lips = cv2.hconcat([all_five_parts_optical_flow[n_img][3], all_five_parts_optical_flow[n_img][4]])
@@ -255,6 +273,7 @@ def main(config):
             img = os.listdir(main_dataset_dir + '/' + n_subName + '/u_test/' + n_expression)
 
             for n_img in img:
+                n_img = n_img.replace(' .png', '')
                 y_test.append(int(n_expression))
                 l_eye_lips = cv2.hconcat([all_five_parts_optical_flow[n_img][0], all_five_parts_optical_flow[n_img][1]])
                 r_eye_lips = cv2.hconcat([all_five_parts_optical_flow[n_img][3], all_five_parts_optical_flow[n_img][4]])
@@ -271,7 +290,8 @@ def main(config):
             num_hierarchies=3,  # 3----number of hierarchies
             block_repeats=(2, 2, 10),  # (2, 2, 8),------
             # the number of transformer blocks at each heirarchy, starting from the bottom(2,2,20) -
-            num_classes=3
+            num_classes=3,
+            channels=6,  # 3:仅光流图 6:光流图+原始图像
         )
 
         model = model.to(device)
@@ -389,7 +409,7 @@ def main(config):
         best_UF1, best_UAR = recognition_evaluation(total_gt, best_total_pred, show=True)
         logger(f'best UF1: {round(best_UF1, 4)} \t best UAR: {round(best_UAR, 4)}')
 
-    if(config.train):
+    if (config.train):
         logger('Final Evaluation on training: ')
     else:
         logger(f'Final Evaluation on {datatype_dic[dataset_type]}: ')

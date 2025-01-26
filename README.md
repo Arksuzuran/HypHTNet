@@ -1,5 +1,5 @@
 # HyperHTNet for micro-expression recognition
-### **HyperHTNet for micro-expression recognition**  
+### HyperHTNet for micro-expression recognition
 
 **Graduation project of Beihang Software School in 2024**
 
@@ -38,16 +38,16 @@ The results are listed as follows:We investigate the effects of the transformer 
 
 ### Experiment
 
-##### Euclidean space
+#### Euclidean space
 
-##### alpha=0.02
+##### alpha=0.002
 
 | UF1/UAR | Full              | SMIC              | CASME II          | SAMM              |
 | ------- | ----------------- | ----------------- | ----------------- | ----------------- |
 | HTNet   | 0.8603/0.8475     | **0.8049/0.7905** | 0.9532/0.9516     | 0.8131/0.8124     |
 | Ours    | **0.8745/0.8574** | 0.7899/0.7737     | **0.9542/0.9545** | **0.8921/0.8804** |
 
-##### alpha=0.01
+##### alpha=0.001
 
 | UF1/UAR | Full              | SMIC              | CASME II          | SAMM              |
 | ------- | ----------------- | ----------------- | ----------------- | ----------------- |
@@ -56,8 +56,36 @@ The results are listed as follows:We investigate the effects of the transformer 
 
 ##### Euclidean space(normal distance)
 
+**alpha=0.2**/0.15
 
+？
 
+##### alpha=0.002
 
+| UF1/UAR | Full              | SMIC              | CASME II      | SAMM          |
+| ------- | ----------------- | ----------------- | ------------- | ------------- |
+| HTNet   | 0.8603/0.8475     | **0.8049/0.7905** | 0.9532/0.9516 | 0.8131/0.8124 |
+| Ours    | **0.8656/0.8544** |                   |               |               |
 
-Euclidean space(dot produce distance)
+##### Euclidean space(dot produce distance)
+
+##### alpha=0.2/0.15
+
+？
+
+##### alpha=0.1
+
+Experiment Date
+
+```
+01-22-01-37-34
+```
+
+Result
+
+| UF1/UAR      | Full              | SMIC              | CASME II          | SAMM              |
+| ------------ | ----------------- | ----------------- | ----------------- | ----------------- |
+| HTNet        | 0.8603/0.8475     | **0.8049**/0.7905 | 0.9532/0.9516     | 0.8131/0.8124     |
+| Ours(上一版) | 0.8745/0.8574     | 0.7899/0.7737     | 0.9542/0.9545     | **0.8921/0.8804** |
+| Ours         | **0.8831/0.8758** | 0.801/**0.7949**  | **0.9647/0.9554** | 0.8571/0.8453     |
+

@@ -16,4 +16,20 @@ CUDA_VISIBLE_DEVICES=3 python main_HTNet.py --train True --a 0.1 --m d
 CUDA_VISIBLE_DEVICES=4 python main_HTNet.py --train True --a 0.05 --m d
 CUDA_VISIBLE_DEVICES=5 python main_HTNet.py --train True --a 0.02 --m d
 
+CUDA_VISIBLE_DEVICES=0 python main_HTNet.py --train True --a 0.15 --m p
+CUDA_VISIBLE_DEVICES=1 python main_HTNet.py --train True --a 0.2 --m p
+CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train True --a 0.15 --m d
+CUDA_VISIBLE_DEVICES=3 python main_HTNet.py --train True --a 0.2 --m d
+
+CUDA_VISIBLE_DEVICES=0 python main_HTNet.py --train False --d 0 --m p --a 0.1 --wdir 01-22-01-37-34
+CUDA_VISIBLE_DEVICES=1 python main_HTNet.py --train False --d 1 --m p --a 0.1 --wdir 01-22-01-37-34
+CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train False --d 2 --m p --a 0.1 --wdir 01-22-01-37-34
+
+CUDA_VISIBLE_DEVICES=0 python main_HTNet.py --train True --a 0.08 --m d
+CUDA_VISIBLE_DEVICES=1 python main_HTNet.py --train True --a 0.09 --m d
+CUDA_VISIBLE_DEVICES=2 python main_HTNet.py --train True --a 0.11 --m d
+CUDA_VISIBLE_DEVICES=3 python main_HTNet.py --train True --a 0.12 --m d
+
+
+
 
