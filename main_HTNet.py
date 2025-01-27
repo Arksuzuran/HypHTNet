@@ -140,11 +140,15 @@ def crop_optical_flow_block(dataset_type):
     for n_img in img_name_list:
         four_parts_imgs[n_img] = []
         flow_image = cv2.imread(whole_optical_flow_path + '/' + n_img + ' .png')
-        raw_image = cv2.imread(raw_img_path + '/' + n_img + '.jpg')
-        raw_image = cv2.resize(raw_image, (28, 28), interpolation=cv2.INTER_AREA)
 
-        # 将光流图和原始图片在通道维度上拼接
-        combined_image = cv2.merge([flow_image, raw_image])
+        if config.mix:
+            # 将光流图和原始图片在通道维度上拼接
+            raw_image = cv2.imread(raw_img_path + '/' + n_img + '.jpg')
+            raw_image = cv2.resize(raw_image, (28, 28), interpolation=cv2.INTER_AREA)
+            combined_image = cv2.merge([flow_image, raw_image])
+        else:
+            # 仅适用光流图
+            combined_image = flow_image
 
         four_part_coordinates = face_block_coordinates_dict[n_img]
 
@@ -165,7 +169,6 @@ def crop_optical_flow_block(dataset_type):
         four_parts_imgs[n_img].append(nose)
         four_parts_imgs[n_img].append(r_eye)
         four_parts_imgs[n_img].append(r_lips)
-        # print(np.shape(four_parts_imgs[n_img]))
     # print((four_parts_optical_flow_imgs['spNO.189_f_150.png'][0]))->(14,14,3)
     # print(np.shape(four_parts_imgs))
     return four_parts_imgs
@@ -209,6 +212,7 @@ def main(config):
     epochs = 600
     alpha = config.a
     metric = config.m
+    channels = 6 if config.mix else 3
     all_accuracy_dict = {}
 
     is_cuda = torch.cuda.is_available()
@@ -291,7 +295,7 @@ def main(config):
             block_repeats=(2, 2, 10),  # (2, 2, 8),------
             # the number of transformer blocks at each heirarchy, starting from the bottom(2,2,20) -
             num_classes=3,
-            channels=6,  # 3:仅光流图 6:光流图+原始图像
+            channels=channels,  # 3:仅光流图 6:光流图+原始图像
         )
 
         model = model.to(device)
@@ -337,10 +341,10 @@ def main(config):
                     optimizer.zero_grad()
                     x = batch[0].to(device)
                     y = batch[1].to(device)
-                    x_p, y_hat = model(x)
+                    x_p, x_e, y_hat = model(x)
 
                     # TODO:引入对比学习
-                    loss, cls_loss, cst_loss = loss_fn(x_p, y_hat, y)
+                    loss, cls_loss, cst_loss = loss_fn(x_p, x_e, y_hat, y)
                     loss.backward()
                     optimizer.step()
 
@@ -368,8 +372,8 @@ def main(config):
             for batch in test_dl:
                 x = batch[0].to(device)
                 y = batch[1].to(device)
-                x_p, y_hat = model(x)
-                loss, cls_loss, cst_loss = loss_fn(x_p, y_hat, y)
+                x_p, x_e, y_hat = model(x)
+                loss, cls_loss, cst_loss = loss_fn(x_p, x_e, y_hat, y)
                 for name, loss_value in zip(losses.keys(), [loss, cls_loss, cst_loss]):
                     losses[name] += loss_value.data.item() * x.size(0)
                 num_val_correct += (torch.max(y_hat, 1)[1] == y).sum().item()
@@ -427,10 +431,12 @@ if __name__ == '__main__':
     parser.add_argument('--train', type=strtobool, default=False)  # Train or use pre-trained weight for prediction
     parser.add_argument('--a', type=float, default='0.05',
                         help='Weight of contrastive loss')
-    parser.add_argument('--m', type=str, default='p', help='Metric used for loss function. e for Euclidean distance, '
+    parser.add_argument('--m', type=str, default='d', help='Metric used for loss function. '
+                                                           'e for Euclidean distance, '
                                                            'p for normal Hyperbolic distance, '
                                                            'd for Hyperbolic dot produce distance.'
-                                                           '(default: p)')
+                                                           'ed for Euclidean Distance - Hyperbolic dot loss'
+                                                           '(default: d)')
     parser.add_argument('--d', type=str, default='all', help='Dataset to eval the model. Only work when --train '
                                                              'False. 0 for SAMM, 1 for SMIC , 2 for CASMEII,'
                                                              'default for combined dataset')
@@ -438,5 +444,9 @@ if __name__ == '__main__':
                                                                            'Only work when --train False.')
     parser.add_argument('--psz', type=int, default='7',
                         help='Patch Size (default: 7)')
+    parser.add_argument('--mix', type=strtobool, default=False, help='Whether to mix flow images and raw images as '
+                                                                     'model input, default for only flow images')
+    parser.add_argument('--lam', type=float, default='3',
+                        help='Weight of hyper distance in contrastive loss, Only work when --m ed.(default: 3)')
     config = parser.parse_args()
     main(config)

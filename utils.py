@@ -188,12 +188,17 @@ class Logger:
 # TODO 损失函数设计
 class LossFunction:
 
-    def __init__(self, classification_loss_type="cross_entropy", contrastive_loss_type=0, alpha=0.05, metric="d"):
+    def __init__(self, classification_loss_type="cross_entropy", contrastive_loss_type=0, alpha=0.05, metric="d",
+                 tau_e=0.05, tau_p=0.2, hyp_c=0.1, lam=3):
         """
         alpha: 对比损失的权重
         """
         self.metric = metric
         self.alpha = alpha
+        self.hyp_c = hyp_c
+        self.lam = lam
+        self.tau_e = tau_e
+        self.tau_p = tau_p
 
         self.classification_loss_fn = None
         if classification_loss_type == "cross_entropy":
@@ -203,60 +208,79 @@ class LossFunction:
         if contrastive_loss_type == 0:
             self.contrastive_loss_fn = contrastive_loss_multi_class_0
 
-    def __call__(self, x_p, y_hat, y):
+    def __call__(self, x_p, x_e, y_hat, y):
         """
         :param x_p: 映射到双曲空间的特征
         :param y_hat: 分类结果
         :param y: 真实类别
         """
-        contrastive_loss = self.alpha * self.contrastive_loss_fn(x_p, y, metric=self.metric)
+        contrastive_loss = self.alpha * self.contrastive_loss_fn(x_p, x_e, y, metric=self.metric, tau_e=self.tau_e,
+                                                                 tau_p=self.tau_p, hyp_c=self.hyp_c, lam=self.lam)
         classification_loss = (1 - self.alpha) * self.classification_loss_fn(y_hat, y)
         loss = contrastive_loss + classification_loss
         # print("contrastive_loss:", contrastive_loss, "classification_loss:", classification_loss)
         return loss, contrastive_loss, classification_loss
 
 
-def contrastive_loss_multi_class_0(embeddings, labels, metric="d", tau=0.2, hyp_c=0.1):
+def contrastive_loss_multi_class_0(x_p, x_e, labels, metric="d", tau_e=0.05, tau_p=0.2, hyp_c=0.1, lam=3):
     """
     TODO:对比损失函数 微表情分类(3分类)
-    :param embeddings: 图像的特征向量，(batch_size, embedding_dim)
+    :param x_p: 图像在双曲空间的的特征向量，(batch_size, embedding_dim)
+    :param x_e: 图像在欧式空间的的特征向量，(batch_size, embedding_dim)
     :param labels: 图像的真实标签，(batch_size,)
-    :param metric: 距离度量方式，e欧氏距离 p双曲距离 d双曲空间的点积形式
-    :param tau: 温度参数，用于控制相似度得分的分布
+    :param metric: 距离度量方式，e欧氏距离 p双曲距离 d双曲空间的点积 ed欧式空间距离与双曲空间点积的混合损失
+    :param tau_e: 欧式空间温度参数
+    :param tau_p: 双曲空间温度参数，用于控制相似度得分的分布
     :param hyp_c: 双曲空间的曲率参数，仅在 metric 为 "p" 或 "d" 时使用
     :return: 对比损失值
     """
-    if metric == "e":
-        dist_f = lambda x, y: -torch.cdist(x, y, p=2)
+    dist_f_e = None
+    if metric == "d":
+        dist_f_p = lambda x, y: -dist_matrix_d(x, y, c=hyp_c)
+    elif metric == "ed":
+        dist_f_p = lambda x, y: -dist_matrix_d(x, y, c=hyp_c)
+        dist_f_e = lambda x, y: -torch.cdist(x, y, p=2)
+    elif metric == "e":
+        dist_f_p = lambda x, y: -torch.cdist(x, y, p=2)
     elif metric == "p":
-        dist_f = lambda x, y: -dist_matrix(x, y, c=hyp_c)
-    elif metric == "d":
-        dist_f = lambda x, y: -dist_matrix_d(x, y, c=hyp_c)
+        dist_f_p = lambda x, y: -dist_matrix(x, y, c=hyp_c)
     else:
         print(f"{metric}: No such type metric!")
         exit(1)
 
-    bsize = embeddings.shape[0]
-    # 特征向量在双曲空间的距离矩阵 即两两样本之间的距离
-    dist = dist_f(embeddings, embeddings) / tau
-    # print("embeddings:", embeddings.shape, "labels:", labels.shape)
-
+    bsize = x_p.shape[0]
     # 计算正负样本对 正样本对为1， 负样本对为0
     mask = torch.eq(labels.unsqueeze(1), labels.unsqueeze(0)).float().cuda()
     # print("mask:", mask.shape)
 
+    # 特征向量在双曲空间的距离矩阵 即两两样本之间的距离
+    dist_p = dist_f_p(x_p, x_p) / tau_p
     # 排除对角线元素，即自身与自身的距离
-    logits = dist - torch.diag(dist.diag())
+    dist_p = dist_p - torch.diag(dist_p.diag())
+
+    dist_e = 0
+    if metric == "ed":
+        # 特征向量在欧式空间的距离矩阵
+        dist_e = dist_f_e(x_e, x_e) / tau_e
+        # print('dist_p and dist_e:', dist_p.shape, dist_e.shape, 'x_p and x_e:', x_p.shape, x_e.shape)
+        # 排除对角线元素，即自身与自身的距离
+        dist_e = dist_e - torch.diag(dist_e.diag())
+
+    # 混合欧式空间距离与双曲空间距离
+    if metric == "ed":
+        logits = lam * dist_p + dist_e
+    else:
+        logits = dist_p
 
     # 正样本对间距
     logits_pos = logits * mask
     # 负样本对间距
     logits_neg = logits * (1 - mask)
 
-    # 计算每个样本的正样本对平均距离之和
+    # 计算每个样本的正样本对距离之和
     logits_pos_sum = torch.sum(logits_pos, dim=1, keepdim=True) / logits_pos.shape[0]
 
-    # 计算每个样本的负样本对平均距离之和 求和以减少计算量
+    # 计算每个样本的负样本对距离之和 求和以减少计算量
     logits_neg_sum = torch.sum(logits_neg, dim=1, keepdim=True) / logits_neg.shape[0]
 
     # 计算每个样本的对比损失

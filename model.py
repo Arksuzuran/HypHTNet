@@ -252,7 +252,9 @@ class HTNet(nn.Module):
 
     def forward(self, img):
         """
-        :return: p_head(x):降维映射到双曲空间后的特征 ce_head(x):分类结果
+        :return: p_head(x):降维映射到双曲空间后的特征([n_img, 128])
+                 x:在欧式空间的特征([n_img, 1024])
+                 ce_head(x):分类结果
         """
         x = self.to_patch_embedding(img)
         b, c, h, w = x.shape
@@ -269,7 +271,7 @@ class HTNet(nn.Module):
         # TODO:映射到双曲空间 分类器
         x_p = self.p_head(x)
         ce = self.ce_head(x)
-        return x_p, ce
+        return x_p, x.squeeze(-1).squeeze(-1), ce
 
 
 # This function is to confuse three models
